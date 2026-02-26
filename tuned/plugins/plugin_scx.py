@@ -148,7 +148,8 @@ class ScxPlugin(base.Plugin):
 			mode_opt = instance.options.get("mode", "auto")
 			if mode_opt is None:
 				mode_opt = "auto"
-			mode_str = str(mode_opt).strip().lower()
+			mode_opt = self._variables.expand(str(mode_opt))
+			mode_str = mode_opt.strip().lower()
 			mode_num = MODE_MAP.get(mode_str)
 			if mode_num is None:
 				log.warning("scx: invalid mode '%s', expected one of: %s"
@@ -183,8 +184,12 @@ class ScxPlugin(base.Plugin):
 	@command_set("mode")
 	def _set_mode(self, value, instance, sim, remove):
 		# Mode is applied together with the scheduler in _set_scheduler.
-		# This handler only validates the value.
+		# This handler validates the value and returns None when
+		# scx_loader is absent so that verification is skipped.
 		if value is None:
+			return None
+		proxy, _ = _get_dbus_proxy()
+		if proxy is None:
 			return None
 		value = str(value).strip().lower()
 		if value not in MODE_MAP:
