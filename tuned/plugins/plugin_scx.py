@@ -12,8 +12,8 @@ DBUS_PROPS_IFACE = "org.freedesktop.DBus.Properties"
 MODE_MAP = {
 	"auto": 0,
 	"gaming": 1,
-	"lowlatency": 2,
-	"powersave": 3,
+	"powersave": 2,
+	"lowlatency": 3,
 	"server": 4,
 }
 
