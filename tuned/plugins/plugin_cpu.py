@@ -253,6 +253,7 @@ class CPULatencyPlugin(hotplug.Plugin):
 			"pm_qos_resume_latency_us": None,
 			"energy_performance_preference" : None,
 			"boost": None,
+			"scaling_min_freq"     : None,
 		}
 
 	def _check_arch(self):
@@ -862,4 +863,51 @@ class CPULatencyPlugin(hotplug.Plugin):
 			return self._cmd.read_file(self._pstate_preference_path(cpu_id)).strip()
 		else:
 			log.debug("energy_performance_available_preferences file missing, which can happen if the system is booted without a P-state driver.")
+		return None
+
+	@command_set("scaling_min_freq", per_device=True)
+	def _set_scaling_min_freq(self, scaling_min_freq, device, instance, sim, remove):
+		if not self._is_cpu_online(device):
+			log.debug("%s is not online, skipping" % device)
+			return None
+		cpu_id = device.lstrip("cpu")
+		policy_dir = "/sys/devices/system/cpu/cpufreq/policy%s" % cpu_id
+		scaling_min_freq_path = os.path.join(policy_dir, "scaling_min_freq")
+
+		if not os.path.exists(scaling_min_freq_path):
+			log.debug("scaling_min_freq not available for cpu '%s'" % device)
+			return None
+
+		# If the value is a sysfs sibling filename (e.g. "cpuinfo_min_freq" or
+		# "amd_pstate_lowest_nonlinear_freq"), read the numeric value from that
+		# file and write it to scaling_min_freq — mirroring PPD behaviour.
+		val = scaling_min_freq
+		if not scaling_min_freq.lstrip('-').isdigit():
+			source_path = os.path.join(policy_dir, scaling_min_freq)
+			if os.path.exists(source_path):
+				val = self._cmd.read_file(source_path).strip()
+				if not val:
+					log.error("Failed to read '%s' for cpu '%s'" % (source_path, device))
+					return None
+			else:
+				log.warning("scaling_min_freq source '%s' not found for cpu '%s', skipping" % (scaling_min_freq, device))
+				return None
+
+		if not sim:
+			self._cmd.write_to_file(scaling_min_freq_path, val,
+				no_error=[errno.ENOENT] if remove else False, ignore_same=True)
+			log.info("Setting scaling_min_freq to '%s' for cpu '%s'" % (val, device))
+		return val
+
+	@command_get("scaling_min_freq")
+	def _get_scaling_min_freq(self, device, instance, ignore_missing=False):
+		if not self._is_cpu_online(device):
+			log.debug("%s is not online, skipping" % device)
+			return None
+		cpu_id = device.lstrip("cpu")
+		path = "/sys/devices/system/cpu/cpufreq/policy%s/scaling_min_freq" % cpu_id
+		if os.path.exists(path):
+			return self._cmd.read_file(path).strip()
+		else:
+			log.debug("scaling_min_freq not available for cpu '%s'" % device)
 		return None
