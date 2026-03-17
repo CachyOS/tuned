@@ -107,12 +107,16 @@ class VideoPlugin(base.Plugin):
 	_DPM_PERF_LEVELS_STR = ", ".join(sorted(_DPM_PERF_LEVELS))
 
 	def _files(self, device):
+		# power_dpm_force_performance_level is a PCI device attribute,
+		# only accessible via the card node (card0), not via connectors
+		# (card0-DP-1) whose device/ symlink points to the DRM card node
+		card = device.split("-", 1)[0]
 		return {
 			"method" : "/sys/class/drm/%s/device/power_method" % device,
 			"profile": "/sys/class/drm/%s/device/power_profile" % device,
 			"dpm_state": "/sys/class/drm/%s/device/power_dpm_state" % device,
 			"panel_power_savings": "/sys/class/drm/%s/amdgpu/panel_power_savings" % device,
-			"dpm_perf_level": "/sys/class/drm/%s/device/power_dpm_force_performance_level" % device,
+			"dpm_perf_level": "/sys/class/drm/%s/device/power_dpm_force_performance_level" % card,
 		}
 
 	def apply_panel_power_saving_target(self, device, target, instance, sim=False):
