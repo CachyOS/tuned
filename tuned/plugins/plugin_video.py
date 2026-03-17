@@ -228,6 +228,7 @@ class VideoPlugin(base.Plugin):
 				"Valid values: %s" % (value, device, self._DPM_PERF_LEVELS_STR))
 			return None
 		if not sim:
+			log.info("Setting dpm_perf_level to '%s' on '%s'" % (value, device))
 			if not self._cmd.write_to_file(sys_files["dpm_perf_level"], value,
 					no_error=[errno.ENOENT] if remove else False):
 				return None
