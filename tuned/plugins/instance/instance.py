@@ -4,9 +4,10 @@ class Instance(object):
 	"""
 	"""
 
-	def __init__(self, plugin, name, priority, devices_expression, devices_udev_regex, script_pre, script_post, options):
+	def __init__(self, plugin, name, priority, devices_expression, devices_udev_regex, script_pre, script_post, rotational, options):
 		self._plugin = plugin
 		self._name = name
+		self._rotational = rotational
 		self._devices_expression = devices_expression
 		self._devices_udev_regex = devices_udev_regex
 		self._script_pre = script_pre
@@ -42,6 +43,10 @@ class Instance(object):
 	@property
 	def priority(self):
 		return self._priority
+
+	@property
+	def rotational(self):
+		return self._rotational
 
 	@property
 	def devices_expression(self):
