@@ -99,12 +99,13 @@ class VideoPlugin(base.Plugin):
 	def _instance_cleanup(self, instance):
 		pass
 
-	_DPM_PERF_LEVELS = frozenset([
+	_DPM_PERF_LEVELS_LIST = [
 		"auto", "low", "high", "manual",
 		"profile_standard", "profile_min_sclk", "profile_min_mclk",
 		"profile_peak", "perf_determinism",
-	])
-	_DPM_PERF_LEVELS_STR = ", ".join(sorted(_DPM_PERF_LEVELS))
+	]
+	_DPM_PERF_LEVELS = frozenset(_DPM_PERF_LEVELS_LIST)
+	_DPM_PERF_LEVELS_STR = ", ".join(_DPM_PERF_LEVELS_LIST)
 
 	def _files(self, device):
 		# power_dpm_force_performance_level is a PCI device attribute,
