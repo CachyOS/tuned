@@ -500,12 +500,13 @@ class Controller(tuned.exports.interfaces.ExportableInterface):
 			log.error(rets)
 			return (False, rets)
 		devices = options.pop("devices", None)
+		rotational = options.pop("rotational", None)
 		devices_udev_regex = options.pop("devices_udev_regex", None)
 		script_pre = options.pop("script_pre", None)
 		script_post = options.pop("script_post", None)
 		priority = int(options.pop("priority", self._daemon._unit_manager._def_instance_priority))
 		try:
-			instance = plugin.create_instance(instance_name, priority, devices, devices_udev_regex, script_pre, script_post, options)
+			instance = plugin.create_instance(instance_name, priority, devices, devices_udev_regex, script_pre, script_post, rotational, options)
 			plugin.initialize_instance(instance)
 			self._daemon._unit_manager.instances.append(instance)
 		except Exception as e:

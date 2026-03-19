@@ -105,7 +105,8 @@ class Manager(object):
 			log.debug("creating '%s' (%s)" % (instance_info.name, instance_info.type))
 			new_instance = plugin.create_instance(instance_info.name, instance_info.priority, \
 				instance_info.devices, instance_info.devices_udev_regex, \
-				instance_info.script_pre, instance_info.script_post, instance_info.options)
+				instance_info.script_pre, instance_info.script_post,
+				instance_info.rotational, instance_info.options)
 			instances.append(new_instance)
 		for instance in instances:
 			instance.plugin.init_devices()

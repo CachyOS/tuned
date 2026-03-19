@@ -93,14 +93,14 @@ class Plugin(object):
 	# Interface for manipulation with instances of the plugin.
 	#
 
-	def create_instance(self, name, priority, devices_expression, devices_udev_regex, script_pre, script_post, options):
+	def create_instance(self, name, priority, devices_expression, devices_udev_regex, script_pre, script_post, rotational, options):
 		"""Create new instance of the plugin and seize the devices."""
 		if name in self._instances:
 			raise Exception("Plugin instance with name '%s' already exists." % name)
 
 		effective_options = self._get_effective_options(options)
 		instance = self._instance_factory.create(self, name, priority, devices_expression, devices_udev_regex, \
-			script_pre, script_post, effective_options)
+			script_pre, script_post, rotational, effective_options)
 		self._instances[name] = instance
 		self._instances = collections.OrderedDict(sorted(self._instances.items(), key=lambda x: x[1].priority))
 
@@ -155,7 +155,13 @@ class Plugin(object):
 
 	def _get_matching_devices(self, instance, devices):
 		if instance.devices_udev_regex is None:
-			return set(self._device_matcher.match_list(instance.devices_expression, devices))
+			device_list = set(self._device_matcher.match_list(instance.devices_expression, devices))
+			if instance.rotational != None:
+				return set(device for device in device_list
+					if os.path.exists("/sys/block/%s/queue/rotational" % device) and \
+					self._cmd.read_file("/sys/block/%s/queue/rotational" % device).strip() == instance.rotational)
+			else:
+				return device_list
 		else:
 			udev_devices = self._get_device_objects(devices)
 			if udev_devices is None:
