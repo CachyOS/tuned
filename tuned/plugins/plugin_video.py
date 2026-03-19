@@ -42,6 +42,27 @@ class VideoPlugin(base.Plugin):
 	with the [option]`panel_power_savings` option.
 	This accepts a value range from 0 to 4, where 4 is the highest power savings
 	but will trade off color accuracy.
+
+	The [option]`dpm_perf_level` option controls the amdgpu
+	`power_dpm_force_performance_level` sysfs knob. Supported values are:
+
+	* `auto` — driver-managed automatic power state (default)
+	* `low` — force lowest power state
+	* `high` — force highest performance state
+	* `manual` — manual power level control (used with `pp_power_profile_mode`)
+	* `profile_standard`
+	* `profile_min_sclk`
+	* `profile_min_mclk`
+	* `profile_peak`
+	* `perf_determinism`
+
+	.Forcing peak GPU performance
+	====
+	----
+	[video]
+	dpm_perf_level=profile_peak
+	----
+	====
 	"""
 
 	def __init__(self, *args, **kwargs):
@@ -68,6 +89,7 @@ class VideoPlugin(base.Plugin):
 		return {
 			"radeon_powersave" : None,
 			"panel_power_savings": None,
+			"dpm_perf_level": None,
 		}
 
 	def _instance_init(self, instance):
@@ -77,12 +99,25 @@ class VideoPlugin(base.Plugin):
 	def _instance_cleanup(self, instance):
 		pass
 
+	_DPM_PERF_LEVELS_LIST = [
+		"auto", "low", "high", "manual",
+		"profile_standard", "profile_min_sclk", "profile_min_mclk",
+		"profile_peak", "perf_determinism",
+	]
+	_DPM_PERF_LEVELS = frozenset(_DPM_PERF_LEVELS_LIST)
+	_DPM_PERF_LEVELS_STR = ", ".join(_DPM_PERF_LEVELS_LIST)
+
 	def _files(self, device):
+		# power_dpm_force_performance_level is a PCI device attribute,
+		# only accessible via the card node (card0), not via connectors
+		# (card0-DP-1) whose device/ symlink points to the DRM card node
+		card = device.split("-", 1)[0]
 		return {
 			"method" : "/sys/class/drm/%s/device/power_method" % device,
 			"profile": "/sys/class/drm/%s/device/power_profile" % device,
 			"dpm_state": "/sys/class/drm/%s/device/power_dpm_state" % device,
 			"panel_power_savings": "/sys/class/drm/%s/amdgpu/panel_power_savings" % device,
+			"dpm_perf_level": "/sys/class/drm/%s/device/power_dpm_force_performance_level" % card,
 		}
 
 	def apply_panel_power_saving_target(self, device, target, instance, sim=False):
@@ -180,3 +215,31 @@ class VideoPlugin(base.Plugin):
 			return None
 		fname = self._files(device)["panel_power_savings"]
 		return self._cmd.read_file(fname, no_error=ignore_missing).strip()
+
+	@command_set("dpm_perf_level", per_device=True)
+	def _set_dpm_perf_level(self, value, device, instance, sim, remove):
+		"""Set power_dpm_force_performance_level for amdgpu devices"""
+		sys_files = self._files(device)
+		if not os.path.exists(sys_files["dpm_perf_level"]):
+			log.debug("dpm_perf_level is not supported on '%s'" % device)
+			return None
+		value = value.strip()
+		if value not in self._DPM_PERF_LEVELS:
+			log.warning("Invalid value '%s' for dpm_perf_level on '%s'. "
+				"Valid values: %s" % (value, device, self._DPM_PERF_LEVELS_STR))
+			return None
+		if not sim:
+			log.info("Setting dpm_perf_level to '%s' on '%s'" % (value, device))
+			if not self._cmd.write_to_file(sys_files["dpm_perf_level"], value,
+					no_error=[errno.ENOENT] if remove else False):
+				return None
+		return value
+
+	@command_get("dpm_perf_level")
+	def _get_dpm_perf_level(self, device, instance, ignore_missing=False):
+		"""Get the current power_dpm_force_performance_level value"""
+		sys_files = self._files(device)
+		if not os.path.exists(sys_files["dpm_perf_level"]):
+			log.debug("dpm_perf_level is not supported on '%s'" % device)
+			return None
+		return self._cmd.read_file(sys_files["dpm_perf_level"], no_error=ignore_missing).strip()
