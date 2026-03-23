@@ -256,6 +256,7 @@ endif
 
 install-ppd:
 	$(call install_python_script,tuned-ppd.py,$(DESTDIR)$(SBINDIR)/tuned-ppd)
+	$(call install_python_script,tuned/ppd/powerprofilesctl,$(DESTDIR)$(BINDIR)/powerprofilesctl)
 	install -Dpm 0644 tuned/ppd/tuned-ppd.service $(DESTDIR)$(UNITDIR)/tuned-ppd.service
 	install -Dpm 0644 tuned/ppd/ppd.conf $(DESTDIR)$(SYSCONFDIR)/tuned/ppd.conf
 	$(foreach bus, $(PPD_BUS_NAMES), \
